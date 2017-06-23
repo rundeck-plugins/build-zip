@@ -31,11 +31,3 @@ task pluginZip(type: Jar) {
     }
 }
 
-
-task build(dependsOn: 'pluginZip') << {
-
-}
-
-task clean(type: Delete) {
-    delete('build')
-}
