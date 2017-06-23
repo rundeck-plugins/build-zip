@@ -1,0 +1,41 @@
+
+defaultTasks 'build'
+
+configurations {
+    create('default')
+}
+
+task pluginZip(type: Jar) {
+    destinationDir = file("build/libs")
+    baseName = project.ext.archivesBaseName
+    version = project.version
+    extension = 'zip'
+
+    println project.buildDir
+
+	from ("."){
+        include("*.yaml")
+        include("resources/*")
+        include("contents/*")
+        into(archiveFilename)
+    }
+   
+    manifest {
+        attributes 'Rundeck-Plugin-Name': pluginName.toString(),
+                   'Rundeck-Plugin-Description': pluginDescription.toString(),
+                   'Rundeck-Plugin-Archive': 'true',
+                   'Rundeck-Plugin-File-Version': version,
+                   'Rundeck-Plugin-Author': sopsCopyright,
+                   'Rundeck-Plugin-URL': sopsUrl,
+                   'Rundeck-Plugin-Date': buildDateString
+    }
+}
+
+
+task build(dependsOn: 'pluginZip') << {
+
+}
+
+task clean(type: Delete) {
+    delete('build')
+}
