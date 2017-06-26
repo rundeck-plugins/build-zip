@@ -1,10 +1,6 @@
 
 defaultTasks 'build'
 
-configurations {
-    create('default')
-}
-
 task pluginZip(type: Jar) {
     destinationDir = file("build/libs")
     baseName = project.ext.archivesBaseName
@@ -13,7 +9,7 @@ task pluginZip(type: Jar) {
 
     println project.buildDir
 
-	from ("."){
+  from ("."){
         include("*.yaml")
         include("resources/*")
         include("contents/*")
@@ -31,3 +27,24 @@ task pluginZip(type: Jar) {
     }
 }
 
+apply plugin: 'maven-publish'
+
+publishing {
+    publications {
+        mavenZip(MavenPublication) {
+            artifact pluginZip
+        }
+    }
+}
+
+defaultTasks 'clean', 'build','pluginZip'
+
+task build(dependsOn: ['pluginZip']) << {
+}
+
+task install(dependsOn: ['build','publishToMavenLocal']) << {
+}
+
+task clean(type: Delete) {
+    delete('build')
+}
