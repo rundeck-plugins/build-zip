@@ -1,4 +1,3 @@
-
 defaultTasks 'build'
 
 task pluginZip(type: Jar) {
@@ -6,10 +5,8 @@ task pluginZip(type: Jar) {
     baseName = project.ext.archivesBaseName
     version = project.version
     extension = 'zip'
-
-    println project.buildDir
-
-  from ("."){
+    
+    from ("${project.ext.pluginBaseFolder}"){
         include("*.yaml")
         include("resources/*")
         include("contents/*")
@@ -36,6 +33,8 @@ publishing {
         }
     }
 }
+
+
 
 defaultTasks 'clean', 'build','pluginZip'
 
