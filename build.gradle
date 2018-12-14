@@ -11,7 +11,7 @@ task pluginZip(type: Jar) {
 
     from("${project.buildDir}/zip-contents") {
         include("*.yaml")
-        include("resources/*")
+        include("resources/**")
         include("contents/*")
         into(archiveFilename)
     }
@@ -42,7 +42,7 @@ pluginZip.doFirst {
     copy {
 
         from("${project.projectDir}/resources"){
-            include '**/*.png'
+            include '**/*'
             into "resources"
         }
 
