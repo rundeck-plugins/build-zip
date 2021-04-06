@@ -71,11 +71,9 @@ publishing {
 
 defaultTasks 'clean', 'build','pluginZip'
 
-task build(dependsOn: ['pluginZip']) << {
-}
+task build(dependsOn: ['pluginZip']) { doLast { } }
 
-task install(dependsOn: ['build','publishToMavenLocal']) << {
-}
+task install(dependsOn: ['build','publishToMavenLocal']) { doLast { } }
 
 task clean(type: Delete) {
     delete('build')
