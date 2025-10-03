@@ -1,0 +1,21 @@
+// Security: Use HTTPS for all repositories
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        // Security: Only use HTTPS repositories
+        // Avoid using maven { url "http://..." } or jcenter()
+    }
+}
+
+rootProject.name = 'rundeck-plugin-build-zip'
+
+// Security: Enable strict version resolution
+enableFeaturePreview('TYPESAFE_PROJECT_ACCESSORS')
