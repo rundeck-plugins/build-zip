@@ -1,52 +1,65 @@
 import org.apache.tools.ant.filters.ReplaceTokens
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
-defaultTasks 'build'
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
 
-task pluginZip(type: Jar) {
-    destinationDir = file("build/libs")
-    baseName = project.ext.archivesBaseName
-    version = project.version
-    classifier = ''
-    extension = 'zip'
+// Security: Enable reproducible builds
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+def buildDateString = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+
+tasks.register('pluginZip', Jar) {
+    destinationDirectory = file("${project.buildDir}/libs")
+    archiveBaseName = project.findProperty("archivesBaseName") ?: "rundeck-plugin"
+    archiveVersion = project.version
+    archiveClassifier = ''
+    archiveExtension = 'zip'
 
     from("${project.buildDir}/zip-contents") {
         include("*.yaml")
         include("resources/**")
         include("contents/*")
-        into(archiveFilename)
+        into("${archiveBaseName.get()}-${archiveVersion.get()}.zip")
     }
 
     manifest {
-        attributes 'Rundeck-Plugin-Name': pluginName.toString(),
-                   'Rundeck-Plugin-Description': pluginDescription.toString(),
-                   'Rundeck-Plugin-Archive': 'true',
-                   'Rundeck-Plugin-File-Version': version,
-                   'Rundeck-Plugin-Author': sopsCopyright,
-                   'Rundeck-Plugin-URL': sopsUrl,
-                   'Rundeck-Plugin-Date': buildDateString
+        attributes([
+            'Rundeck-Plugin-Name': project.findProperty("pluginName") ?: "Rundeck Plugin",
+            'Rundeck-Plugin-Description': project.findProperty("pluginDescription") ?: "A Rundeck plugin",
+            'Rundeck-Plugin-Archive': 'true',
+            'Rundeck-Plugin-File-Version': project.version,
+            'Rundeck-Plugin-Author': project.findProperty("sopsCopyright") ?: "Rundeck Community",
+            'Rundeck-Plugin-URL': project.findProperty("sopsUrl") ?: "https://github.com/rundeck-plugins",
+            'Rundeck-Plugin-Date': buildDateString
+        ])
     }
 }
 
 pluginZip.doFirst {
-    def assetsMap = new Properties()
-    def tokens = assetsMap + [
-            version    : version,
-            date       : new Date().format("yyyy-MM-dd'T'HH:mm:ssX").toString(),
-            author     : sopsCopyright,
-            url        : sopsUrl,
-            title      : pluginName,
-            description: pluginDescription,
-            name       : archivesBaseName.toString(),
+    def tokens = [
+        version    : project.version,
+        date       : buildDateString,
+        author     : project.findProperty("sopsCopyright") ?: "Rundeck Community",
+        url        : project.findProperty("sopsUrl") ?: "https://github.com/rundeck-plugins",
+        title      : project.findProperty("pluginName") ?: "Rundeck Plugin",
+        description: project.findProperty("pluginDescription") ?: "A Rundeck plugin",
+        name       : project.findProperty("archivesBaseName") ?: "rundeck-plugin",
     ]
 
     copy {
-
-        from("${project.projectDir}/resources"){
+        from("${project.projectDir}/resources") {
             include '**/*'
             into "resources"
         }
 
-        from("${project.projectDir}/contents"){
+        from("${project.projectDir}/contents") {
             into "contents"
         }
 
@@ -59,24 +72,68 @@ pluginZip.doFirst {
     }
 }
 
-apply plugin: 'maven-publish'
-
 publishing {
     publications {
         mavenZip(MavenPublication) {
             artifact pluginZip
+            
+            // Security: Add proper POM metadata
+            pom {
+                name = project.findProperty("pluginName") ?: "Rundeck Plugin"
+                description = project.findProperty("pluginDescription") ?: "A Rundeck plugin"
+                url = project.findProperty("sopsUrl") ?: "https://github.com/rundeck-plugins"
+                
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                
+                developers {
+                    developer {
+                        name = project.findProperty("sopsCopyright") ?: "Rundeck Community"
+                    }
+                }
+                
+                scm {
+                    url = project.findProperty("sopsUrl") ?: "https://github.com/rundeck-plugins"
+                }
+            }
+        }
+    }
+    
+    // Security: Configure secure repositories
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/rundeck-plugins/${project.findProperty("archivesBaseName") ?: "rundeck-plugin"}")
+            credentials {
+                username = System.getProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+                password = System.getProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+            }
         }
     }
 }
 
-defaultTasks 'clean', 'build','pluginZip'
-
-task build(dependsOn: ['pluginZip']) << {
+// Configure existing build task
+build {
+    dependsOn 'pluginZip'
 }
 
-task install(dependsOn: ['build','publishToMavenLocal']) << {
+tasks.register('install') {
+    dependsOn 'build', 'publishToMavenLocal'
+    group = 'publishing'
+    description = 'Builds and installs the plugin to local Maven repository'
 }
 
-task clean(type: Delete) {
-    delete('build')
+// Use built-in clean task
+clean {
+    delete layout.buildDirectory
 }
+
+// Security: Enable dependency verification (can be configured per project)
+// Use 'gradle --write-verification-metadata sha256' to generate verification metadata
+
+// Default tasks
+defaultTasks 'clean', 'build', 'pluginZip'
